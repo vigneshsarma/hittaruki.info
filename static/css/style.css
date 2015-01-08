@@ -51,3 +51,16 @@ pre {
 .content {
   font-family: Inconsolata, "PT Serif", Georgia, "Times New Roman", serif;
 }
+
+
+/*
+ * Container
+ *
+ * Center the page content.
+ */
+
+@media (min-width: 56rem) {
+  .container {
+    max-width: 44rem;
+  }
+}
