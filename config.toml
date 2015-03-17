@@ -1,3 +1,7 @@
 baseurl = "http://hittaruki.info"
 languageCode = "en-us"
 title = "No Title"
+copyright = "This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License."
+
+[author]
+    name = "Vignesh Sarma K"
