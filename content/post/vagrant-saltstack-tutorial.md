@@ -1,6 +1,6 @@
 +++
-date = "2015-01-28T20:56:46+05:30"
-draft = true
+date = "2015-03-17T20:56:46+05:30"
+draft = false
 title = "Vagrant & Saltstack Quickstart Tutorial"
 
 +++
@@ -123,3 +123,30 @@ In the terminal `vagarant up` and you should see output similar to the following
 That's it. If all you wanted was a working LAMP server, you now have it.
 
 And load it in your browser at http://localhost:8080/info.php and you should see everything working as expected.
+
+## Refactoring
+
+The next setup for us here is to reduce the repetitiveness of this code. `pkg` and many other salt modules allow you to give a list of item to apply this module to. For example in case of `pkg` we can rewrite the piece like this.
+
+    install required packages:
+      pkg.installed:
+        - names:
+          - apache2
+          - mysql-server
+          - php5
+
+    /var/www/html/info.php:
+      file.managed:
+        contents: '<?php phpinfo();'
+
+We reduced three separate states to just one. You can test it works by running `vagrant destroy` followed by another `vagrant up` in the root of your project.
+
+## Modularize
+
+Usually, when you're installing packages for a new server you want to do more than just install the packages - you probably want to configure them too. You might want to tell apache to use `/vargrant` instead of `/var/www/html` (which is the default location for vagrant to mount the current directory), or install `php_mysql` and `php_pdo` so you can access your MySQL Server from PHP.
+
+There are two ways you can split this base module.
+
+## Conculsion
+
+Unlike many other infra automation tools you don't need to know many salt specific terminologies. Salt has very minimal concepts. Unlike `Ansible` there is no special roles. You just split it into modules and arrange the files as you see fit.
