@@ -45,8 +45,12 @@ footer li {
 code,
 pre {
   font-family: Monaco, Menlo, "Courier New", monospace;
+  background: rgb(250, 250, 250);
 }
 
+.hljs {
+  background: rgb(250, 250, 250);
+}
 /* */
 .content {
   font-family: Inconsolata, Georgia, "Times New Roman", serif;
