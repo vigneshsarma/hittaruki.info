@@ -128,16 +128,19 @@ And load it in your browser at http://localhost:8080/info.php and you should see
 
 The next setup for us here is to reduce the repetitiveness of this code. `pkg` and many other salt modules allow you to give a list of item to apply this module to. For example in case of `pkg` we can rewrite the piece like this.
 
-    install required packages:
-      pkg.installed:
-        - names:
-          - apache2
-          - mysql-server
-          - php5
+``` yaml
+install required packages:
+  pkg.installed:
+    - names:
+      - apache2
+      - mysql-server
+      - php5
 
-    /var/www/html/info.php:
-      file.managed:
-        contents: '<?php phpinfo();'
+/var/www/html/info.php:
+  file.managed:
+    contents: '<?php phpinfo();'
+```
+
 
 We reduced three separate states to just one. You can test it works by running `vagrant destroy` followed by another `vagrant up` in the root of your project.
 
