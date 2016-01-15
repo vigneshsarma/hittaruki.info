@@ -138,7 +138,7 @@ install required packages:
 
 /var/www/html/info.php:
   file.managed:
-    contents: '<?php phpinfo();'
+    - contents: '<?php phpinfo();'
 ```
 
 
