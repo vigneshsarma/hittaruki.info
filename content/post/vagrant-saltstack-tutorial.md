@@ -36,7 +36,7 @@ We'll need a way to access our webserver once it's provisioned, so we'll tell Va
 config.vm.network "forwarded_port", guest: 80, host: 8080
 ```
 
-Now, there is one last thing we need to do to configure Vagrant, and then we're finished with it. We need to tell Vagrant that we want to use Ansible as its provisioner, and where to find the commands to run. To do this, add the following lines to your `Vagrantfile`, again, just before `end`:
+Now, there is one last thing we need to do to configure Vagrant, and then we're finished with it. We need to tell Vagrant that we want to use Salt as its provisioner, and where to find the commands to run. To do this, add the following lines to your `Vagrantfile`, again, just before `end`:
 
 ```ruby
   config.vm.synced_folder "salt/roots/", "/srv/salt/"
