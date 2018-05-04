@@ -1,5 +1,5 @@
 +++
-date = "2015-12-21T22:46:18+05:30"
+date = "2018-05-04T22:46:18+05:30"
 draft = false
 title = "Water Jug Rewrite With Haskell Part I"
 
@@ -11,7 +11,7 @@ Water jug problem is a famous problem commonly found in AI texts. There are few 
 1. [cis.udel.edu](https://www.eecis.udel.edu/~mccoy/courses/cisc4-681.10f/lec-materials/handouts/search-water-jug-handout.pdf)
 2. [math.tamu.edu](http://www.math.tamu.edu/~dallen/hollywood/diehard/diehard.htm)
 
-I also had to do the same problem in my own college days. At the time I was learning python and thought it might be an interesting problem to solve with python. Looking at the code now I feel embarrassed. Am not even sure how I got it work. Rewriting it in python seems rather uninteresting now. Rather using a static functional language like Haskell seamed to make it more interesting. Obviously once you look at the code you will realize currently I don't know much of Haskell either.
+I also had to do the same problem in my own college days. At the time I was learning python and thought it might be an interesting problem to solve with [python](https://github.com/vigneshsarma/water-jug). Looking at the code now I feel embarrassed. Am not even sure how I got it working. Rewriting it in python seems rather uninteresting now. Rather using a static functional language like Haskell seamed to make it more interesting. Obviously once you look at the code you will realize currently I don't know much of Haskell either.
 
 Rather than trying to solve the problem in one shot, I decided to limit the initial version some what.
 
@@ -19,10 +19,7 @@ Rather than trying to solve the problem in one shot, I decided to limit the init
 
 There can be some Water Jars, with any given capacity. The challenge will be to start from that to reach the given final state which will be get some specified quantity of water in these Jars. These Jugs have no measurements. But you know the full capacity of the Jugs.
 
-As a starting point these limitation will be put in place.
-
-1. Max number of Jars will be limited to two.
-2. We will only be finding the relevant states the jars can be in and where they can go from these states.
+As a starting point max number of Jars will be limited to two.
 
 ## Data
 
@@ -38,16 +35,26 @@ data Jug = Jug Int Int deriving (Show, Eq, Ord)
 -- State left right
 data State = State Jug Jug deriving (Show, Eq, Ord)
 
-empty :: Int -> Jug
-empty c = Jug c 0
+-- Problem initial state, destination state
+data Problem = Problem State State deriving (Show, Eq, Ord)
 
+-- StateMap, type alias
+type StateMap = M.Map State [State]
+
+emptyJug :: Int -> Jug
+emptyJug c = Jug c 0
+
+newProblem :: Int -> Int -> Int -> Int -> Problem
+newProblem rc lc r l = Problem (State (emptyJug rc) (emptyJug lc)) (State (Jug rc r) (Jug lc l))
 ```
 
 The `deriving` ensures that we can have reasonable string representation for these objects, they can be equated to each other, ordered etc.
 
-Both these types are tuples. They can only contain two arguments.
+All these types we created using data are tuples. They can only contain two arguments. They are also positional.
 
-`empty` function can be use to create an empty `Jug` of any given capacity.
+`emptyJug` function can be used to create an empty `Jug` of any given capacity.
+
+`newProblem` function can be used to define a problem which include jug capacities and the final state we want to achieve.
 
 ## Possible Operations on Given Jugs
 
@@ -130,25 +137,89 @@ getNextState s = catMaybes $ map (\f -> f s) toNextStates
 
 ## Finding relevent states
 
-Now given a starting state and final state, we try to find all the possible states between them. To be able to make the function recursive I have had to make the function accept lot more arguments though. In all probability it will be called by another function, and most of the other parameters can be derived from the first two.
+Now given a starting state and final state, we try to find all the possible states between them. The `allStates` function is a kind of wrapper for the inner `allStates'` function. `allStates` calls the inner functions with a correct set of initial arguments, which implements most of the logic.
 
 ``` haskell
-allStates :: State -> State -> S.Set State -> S.Set State -> M.Map State [State] -> M.Map State [State]
-allStates i f complete queue m
-  | S.null queue = m
-  | otherwise = allStates i' f complete' queue'' m'
-  where ns = getNextState i
-        m' = M.insert i ns m
-        queue' = S.delete i queue
-        new_q = S.fromList $ filter (\s -> S.notMember s complete) ns
-        queue'' = if S.member f new_q then queue' else S.union queue' new_q
-        i' = head $ S.toList queue''
-        complete' = S.insert i complete
+allStates :: Problem -> StateMap
+allStates (Problem i f) =
+  let
+    allStates' :: State -> S.Set State -> StateMap -> StateMap
+    allStates' current queue m
+      | S.null queue = m
+      | otherwise = allStates' next queue'' m'
+      where
+        ns = getNextState current
+        -- insert current state and its possible transitions to the StateMap
+        m' = M.insert current ns m
+        queue' = S.delete current queue
+        -- filter out all the states that have already been visited.
+        new_q = S.fromList $ filter (\s -> M.notMember s m) ns
+        -- if final state is in one of these, we dont care for other transitions
+        -- from that point
+        queue'' = if S.member f new_q
+          then queue'
+          else S.union queue' new_q
+        next = head $ S.toList queue''
+  in
+    allStates' i (S.fromList [i]) M.empty
 ```
 
-You can think of the `where` clauses as being executed top to bottom. In reality though they are all lazy and could be executed as an when the need arises. So order has no meaning.
+You can think of the `where` clauses as being executed top to bottom. In reality though they are all lazy and could be executed as and when the need arises. So order has no meaning.
 
-I am not happy with the number of arguments this function takes, but currently cant think of a better way.
+## Is there a possible path from initial to final state?
+
+Once we have the `StateMap` we should be able to find if there is a possible path from initial to final state. For that we flatten out the values of `StateMap` and check if the final state is one of `State`.
+
+``` haskell
+isPathPossible :: Problem -> StateMap -> Bool
+isPathPossible (Problem _ f) m = S.member f $ S.fromList $ concat $ M.elems m
+```
+
+## Find Paths from Initial to Final State
+
+Once we know there is a path, we walk the `StateMap` depth first to find possible paths to the final state. We look at this like a tree with initial state as the root node. When we find a path that reaches the final state we add that to possible paths and continue with our search. One of the optimizations we do is, if we find cycles, ie same state being repeated we end our search on that branch. Similarly if a state is not in `StateMap` once again we end our search on that branch. In all other cases we fold over next states and call `findPaths'` recursively. `findPaths` and `findPaths'` are similar to `allStates` and `allStates'` in that `findPaths` is mostly a limited wrapper over the inner function which implements most of the logic.
+
+``` haskell
+findPaths :: Problem -> StateMap -> [[State]]
+findPaths (Problem i f) m =
+  findPaths' [i] []
+  where
+    findPaths' :: [State] -> [[State]] -> [[State]]
+    findPaths' (x:xs) ps
+      -- we have found a cycle, return the routes we have found
+      -- and end the search on this branch
+      | x `elem` xs = ps
+      -- found a full path, add that to routes and end branch
+      | x == f  = (reverse $ x:xs):ps
+      | otherwise = case M.lookup x m of
+                      Nothing -> ps
+                      Just ls -> foldl (\ps' l-> findPaths' (l:x:xs) ps') ps ls
+```
+
+## Shortest of the Paths
+
+Now that we have a bunch of candidates for paths to final state, its time to find the shortest one. For that we just compare the length of each of the paths like so:
+
+``` haskell
+shortestPath :: [[State]] -> [State]
+shortestPath ps = foldl (\a x -> if (length a) > (length x)
+                            then x else a) (head ps) (tail ps)
+```
+
+## Putting it all together
+
+Now we have all the pieces to solve a given `Problem`.
+
+``` haskell
+solve :: Problem -> Maybe [State]
+solve p = if isPathPossible p ss
+          then Just $ shortestPath $ findPaths p ss
+          else Nothing
+  where
+    ss = allStates p
+```
+
+The returned type is a bit interesting, it says given a `Problem` maybe we have a solution to get from initial to final state. :)
 
 ## Conclusion
 
@@ -156,10 +227,15 @@ To conclude for now let me present a simple REPL session.
 
 ``` haskell
 > :l WaterJug.hs
-> import qualified Data.Map as M
-> import Data.Maybe
-> import qualified Data.Set as Set
-> allStates (State (emptyJug 4) (emptyJug 3)) (State (Jug 4 2) (emptyJug 3)) Set.empty (Set.fromList [(State (Jug 4 4) (emptyJug 3))]) M.empty
-fromList [(State (Jug 4 0) (Jug 3 0),[State (Jug 4 0) (Jug 3 3),State (Jug 4 4) (Jug 3 0)]),(State (Jug 4 0) (Jug 3 1),[State (Jug 4 0) (Jug 3 3),State (Jug 4 1) (Jug 3 0),State (Jug 4 0) (Jug 3 0),State (Jug 4 4) (Jug 3 1)]),(State (Jug 4 0) (Jug 3 2),[State (Jug 4 0) (Jug 3 3),State (Jug 4 2) (Jug 3 0),State (Jug 4 0) (Jug 3 0),State (Jug 4 4) (Jug 3 2)]),(State (Jug 4 0) (Jug 3 3),[State (Jug 4 3) (Jug 3 0),State (Jug 4 0) (Jug 3 0),State (Jug 4 4) (Jug 3 3)]),(State (Jug 4 1) (Jug 3 0),[State (Jug 4 0) (Jug 3 1),State (Jug 4 0) (Jug 3 0),State (Jug 4 1) (Jug 3 3),State (Jug 4 4) (Jug 3 0)]),(State (Jug 4 1) (Jug 3 3),[State (Jug 4 0) (Jug 3 3),State (Jug 4 4) (Jug 3 0),State (Jug 4 1) (Jug 3 0),State (Jug 4 4) (Jug 3 3)]),(State (Jug 4 2) (Jug 3 3),[State (Jug 4 0) (Jug 3 3),State (Jug 4 4) (Jug 3 1),State (Jug 4 2) (Jug 3 0),State (Jug 4 4) (Jug 3 3)]),(State (Jug 4 3) (Jug 3 0),[State (Jug 4 0) (Jug 3 3),State (Jug 4 0) (Jug 3 0),State (Jug 4 3) (Jug 3 3),State (Jug 4 4) (Jug 3 0)]),(State (Jug 4 3) (Jug 3 3),[State (Jug 4 0) (Jug 3 3),State (Jug 4 4) (Jug 3 2),State (Jug 4 3) (Jug 3 0),State (Jug 4 4) (Jug 3 3)]),(State (Jug 4 4) (Jug 3 0),[State (Jug 4 1) (Jug 3 3),State (Jug 4 0) (Jug 3 0),State (Jug 4 4) (Jug 3 3)]),(State (Jug 4 4) (Jug 3 1),[State (Jug 4 2) (Jug 3 3),State (Jug 4 0) (Jug 3 1),State (Jug 4 4) (Jug 3 3),State (Jug 4 4) (Jug 3 0)]),(State (Jug 4 4) (Jug 3 2),[State (Jug 4 3) (Jug 3 3),State (Jug 4 0) (Jug 3 2),State (Jug 4 4) (Jug 3 3),State (Jug 4 4) (Jug 3 0)]),(State (Jug 4 4) (Jug 3 3),[State (Jug 4 0) (Jug 3 3),State (Jug 4 4) (Jug 3 0)])]
+> solve $ newProblem 4 3 2 2
+Nothing
+>
+> solve $ newProblem 5 3 4 0
+Just [State (Jug 5 0) (Jug 3 0),State (Jug 5 5) (Jug 3 0),State (Jug 5 2) (Jug 3 3),State (Jug 5 2) (Jug 3 0),State (Jug 5 0) (Jug 3 2),State (Jug 5 5) (Jug 3 2),State (Jug 5 4) (Jug 3 3),State (Jug 5 4) (Jug 3 0)]
+>
+> solve $ newProblem 4 3 2 0
+Just [State (Jug 4 0) (Jug 3 0),State (Jug 4 0) (Jug 3 3),State (Jug 4 3) (Jug 3 0),State (Jug 4 3) (Jug 3 3),State (Jug 4 4) (Jug 3 2),State (Jug 4 0) (Jug 3 2),State (Jug 4 2) (Jug 3 0)]
 >
 ```
+
+Next time we will try to solve this for `n` jugs.
