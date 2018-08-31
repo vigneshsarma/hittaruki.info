@@ -1,5 +1,6 @@
 +++
-date = "2012-01-07T00:29:27+05:30"
+lastmod ="2018-08-29"
+date = "2012-01-07"
 title = "About"
 
 +++
@@ -8,6 +9,6 @@ title = "About"
 
 I love to program, learn new technology's, and working on them. I also enjoy a variety of movies and books.
 
-Currently completed my engineering course and am working for a start-up,[recruiterbox](http://recruiterbox.com).We mostly use python with Django and JavaScript for our work.My work is mostly on the back-end with python. Some times rarely with JavaScript too.
+Currently working at Concur with their authentication/authorization team. I have about six plus years of working with backend systems, building REST APIs, working with cloud technologies, etc. in various environments and languages. In the future, I would like to work on scaling distributed systems. I am interested in trying out different languages and proficient to a varying degree in Clojure, Scala, Rust, Haskell, etc.
 
 My full resume can be found [here](http://registry.jsonresume.org/vigneshsarma)

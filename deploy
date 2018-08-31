@@ -3,14 +3,14 @@
 echo -e "\033[0;32mDeploying updates to GitHub...\033[0m"
 
 # clean up
-rm -rf public; mkdir -p public
+# rm -rf public; mkdir -p public
 
 # Build the project.
-hugo # if using a theme, replace by `hugo -t <yourtheme>`
+hugo --minify # if using a theme, replace by `hugo -t <yourtheme>`
 
 # Go To Public folder
 cd public
-git init
+# git init
 # Add changes to git.
 git add -A
 
